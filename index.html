@@ -527,6 +527,45 @@
   .gallery-card .name{font-weight:800; color:#cfe7ff; min-height:38px; line-height:1.1; display:flex; align-items:center; overflow:hidden}
   .gallery-card img{width:100%; height:120px; object-fit:contain; display:block; user-select:none; pointer-events:none; align-self:end}
 
+  /* Click-for-stats hint on Tier 1 tiles */
+  .gallery-card.clickable{ cursor:pointer }
+  .gallery-card .stats-hint{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:#ffe8c7; font-weight:800; letter-spacing:.03em; opacity:0;
+    background: radial-gradient(120px 60px at 50% 70%, rgba(255,176,58,.10), transparent 60%);
+    text-shadow: 0 0 8px rgba(255,176,58,.35);
+    transition: opacity .18s ease;
+    pointer-events:none;
+  }
+  .gallery-card:hover .stats-hint{ opacity:1 }
+
+  /* Weapon Stats Overlay */
+  .stats-overlay{ position:fixed; inset:0; display:none; place-items:center; z-index:70; background: rgba(6,8,14,.55); backdrop-filter: blur(4px) }
+  .stats-overlay.open{ display:grid; animation: overlayFade .18s ease }
+  @keyframes overlayFade{ from{ opacity:0 } to{ opacity:1 } }
+  .stats-card{
+    width:min(900px, 92vw);
+    display:grid; grid-template-columns: 1.2fr 1fr; gap:16px;
+    background: rgba(14,16,25,.75);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:14px; padding:16px; box-shadow: var(--shadow);
+    transform: translateY(8px); opacity:0; animation: slideIn .24s ease forwards;
+  }
+  @keyframes slideIn{ to{ transform:none; opacity:1 } }
+  .stats-card .close{ justify-self:end; background:#1a1d2e; border:1px solid rgba(255,255,255,.18); color:#cbd5e1; border-radius:8px; padding:6px 10px; cursor:pointer }
+  .stats-header{ grid-column: 1 / -1; display:flex; align-items:center; justify-content:space-between; margin-bottom:4px }
+  .stats-title{ font-weight:900; font-size:20px; color:#ffe1a6; text-shadow: 0 0 6px rgba(255,176,58,.45) }
+  .stats-rarity{ font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); color:#cbd5e1 }
+  .stats-preview{ align-self:center; justify-self:center; }
+  .stats-preview img{ width:100%; height:auto; max-height:280px; object-fit:contain; filter: drop-shadow(0 12px 30px rgba(0,0,0,.45)) }
+  .stats-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px }
+  .stat{ background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10); border-radius:10px; padding:10px }
+  .stat .label{ display:block; color:#94a3b8; font-size:12px; margin-bottom:4px }
+  .stat .value{ font-weight:800; font-size:18px; letter-spacing:.02em }
+  .value.green{ color:#78ffb0; text-shadow: 0 0 8px rgba(120,255,176,.25) }
+  .value.red{ color:#ff8f8f; text-shadow: 0 0 8px rgba(255,143,143,.25) }
+  .value.gold{ color:#ffd27a; text-shadow: 0 0 8px rgba(255,176,58,.25) }
+
   /* Server badge (Killadelphia) */
 :root{
   --server-badge: url('https://i.imgur.com/6EqOxmn.png');
@@ -795,6 +834,35 @@
             <div id="t1GridStage" class="t1-grid"></div>
           </section>
         </div>
+        <!-- Weapon stats overlay (Tier 1) -->
+        <div id="statsOverlay" class="stats-overlay" aria-modal="true" role="dialog" aria-labelledby="statsTitle" aria-hidden="true">
+          <div class="stats-card" role="document">
+            <div class="stats-header">
+              <div class="stats-title" id="statsTitle">Weapon</div>
+              <div class="stats-rarity" id="statsRarity">Common</div>
+            </div>
+            <div class="stats-preview"><img id="statsImage" alt=""></div>
+            <div class="stats-grid">
+              <div class="stat">
+                <span class="label">Damage</span>
+                <span class="value gold" id="statDamage">—</span>
+              </div>
+              <div class="stat">
+                <span class="label">Fire Rate</span>
+                <span class="value green" id="statFire">—</span>
+              </div>
+              <div class="stat">
+                <span class="label">Ammo</span>
+                <span class="value" id="statAmmo">—</span>
+              </div>
+              <div class="stat">
+                <span class="label">Magazine</span>
+                <span class="value" id="statMag">—</span>
+              </div>
+            </div>
+            <button id="closeStats" class="close" aria-label="Close">Close</button>
+          </div>
+        </div>
       </div>
       <div id="viewT2" class="view">
         <div class="grid">
@@ -1036,6 +1104,70 @@
     };
   const FALLBACK_IMG = "images/placeholder.png";
 
+  // Basic weapon stats. Extend as needed. Values are illustrative.
+  // { ammo: string, damage: number, fire: rpm, magStd: number, magExt: number }
+  const STATS = {
+    "Glock 19": { ammo: "9x19mm", damage: 28, fire: 600, magStd: 15, magExt: 33 },
+    "Glock 20 Black": { ammo: "10mm", damage: 34, fire: 550, magStd: 15, magExt: 30 },
+    "Glock 20 Tan": { ammo: "10mm", damage: 34, fire: 550, magStd: 15, magExt: 30 },
+    "Glock 21": { ammo: ".45 ACP", damage: 32, fire: 550, magStd: 13, magExt: 27 },
+    "Glock 22": { ammo: ".40 S&W", damage: 30, fire: 600, magStd: 15, magExt: 27 },
+    "Glock 23": { ammo: ".40 S&W", damage: 29, fire: 600, magStd: 13, magExt: 22 },
+    "Glock 26": { ammo: "9x19mm", damage: 27, fire: 600, magStd: 10, magExt: 27 },
+    "Glock 43X": { ammo: "9x19mm", damage: 26, fire: 600, magStd: 10, magExt: 20 },
+    "FN 5.7": { ammo: "5.7x28mm", damage: 25, fire: 700, magStd: 20, magExt: 30 },
+    "Ruger 5.7": { ammo: "5.7x28mm", damage: 25, fire: 700, magStd: 20, magExt: 30 },
+    ".357 Magnum": { ammo: ".357 Magnum", damage: 45, fire: 300, magStd: 6, magExt: 8 },
+    ".38 Special": { ammo: ".38 Special", damage: 32, fire: 320, magStd: 6, magExt: 8 },
+    "PSA AR9": { ammo: "9x19mm", damage: 26, fire: 800, magStd: 30, magExt: 50 },
+    "Draco 9s": { ammo: "9x19mm", damage: 28, fire: 750, magStd: 30, magExt: 50 },
+    "Black Draco": { ammo: "7.62x39mm", damage: 45, fire: 600, magStd: 30, magExt: 60 },
+    "Tan Draco": { ammo: "7.62x39mm", damage: 45, fire: 600, magStd: 30, magExt: 60 },
+    "M16A1": { ammo: "5.56x45mm", damage: 35, fire: 750, magStd: 20, magExt: 30 },
+    ".300 Blackout": { ammo: "300 BLK", damage: 55, fire: 700, magStd: 30, magExt: 60 },
+    "Ghost Glock 17": { ammo: "9x19mm", damage: 28, fire: 600, magStd: 17, magExt: 33 },
+    "Canik TP9": { ammo: "9x19mm", damage: 28, fire: 600, magStd: 18, magExt: 32 },
+    "Polymer 80": { ammo: "9x19mm", damage: 28, fire: 600, magStd: 17, magExt: 33 },
+    "Taurus TX22": { ammo: ".22 LR", damage: 15, fire: 650, magStd: 16, magExt: 25 },
+    "XD-M": { ammo: "9x19mm", damage: 28, fire: 600, magStd: 19, magExt: 32 },
+    "Beretta M9": { ammo: "9x19mm", damage: 27, fire: 580, magStd: 15, magExt: 30 },
+    "Worn G19X": { ammo: "9x19mm", damage: 26, fire: 580, magStd: 17, magExt: 33 },
+    "Taurus G2C": { ammo: "9x19mm", damage: 26, fire: 600, magStd: 12, magExt: 17 },
+    "H&K USP": { ammo: ".45 ACP", damage: 32, fire: 520, magStd: 12, magExt: 20 },
+    "S&W SD40": { ammo: ".40 S&W", damage: 30, fire: 580, magStd: 14, magExt: 22 },
+    "FN 509": { ammo: "9x19mm", damage: 28, fire: 600, magStd: 17, magExt: 24 },
+    "MP9 M2.0": { ammo: "9x19mm", damage: 27, fire: 600, magStd: 17, magExt: 30 },
+    "Sig Sauer M17": { ammo: "9x19mm", damage: 28, fire: 600, magStd: 17, magExt: 21 },
+    "Walter P99": { ammo: "9x19mm", damage: 27, fire: 590, magStd: 15, magExt: 20 },
+    "Glock 3D": { ammo: "9x19mm", damage: 28, fire: 600, magStd: 17, magExt: 33 },
+    "19X": { ammo: "9x19mm", damage: 28, fire: 600, magStd: 17, magExt: 33 },
+    "Glock 45": { ammo: "9x19mm", damage: 28, fire: 620, magStd: 17, magExt: 33 },
+    "Glock 48": { ammo: "9x19mm", damage: 26, fire: 590, magStd: 10, magExt: 15 },
+    "G19X": { ammo: "9x19mm", damage: 29, fire: 610, magStd: 17, magExt: 33 },
+    "Glock 29": { ammo: "10mm", damage: 36, fire: 540, magStd: 10, magExt: 27 },
+    "Glock 30SF": { ammo: ".45 ACP", damage: 33, fire: 540, magStd: 10, magExt: 26 },
+    "Glock 40": { ammo: "10mm", damage: 38, fire: 530, magStd: 15, magExt: 30 },
+    "Glock 41": { ammo: ".45 ACP", damage: 34, fire: 530, magStd: 13, magExt: 27 },
+    "GFlex Glock 17": { ammo: "9x19mm", damage: 28, fire: 750, magStd: 17, magExt: 33 },
+    "Glock 19 FRT": { ammo: "9x19mm", damage: 28, fire: 850, magStd: 15, magExt: 33 },
+    "Glock 19X": { ammo: "9x19mm", damage: 29, fire: 610, magStd: 17, magExt: 33 },
+    "Glock 21 FRT": { ammo: ".45 ACP", damage: 33, fire: 800, magStd: 13, magExt: 27 },
+    "G29": { ammo: "10mm", damage: 36, fire: 540, magStd: 10, magExt: 27 }
+  };
+
+  function defaultStats(name){
+    const n = name.toLowerCase();
+    if(n.includes('5.7')) return { ammo: '5.7x28mm', damage: 25, fire: 700, magStd: 20, magExt: 30 };
+    if(n.includes('draco') && !n.includes('9')) return { ammo: '7.62x39mm', damage: 45, fire: 600, magStd: 30, magExt: 60 };
+    if(n.includes('ar9') || n.includes('mpa') || n.includes('mac-10')) return { ammo: '9x19mm', damage: 26, fire: 800, magStd: 30, magExt: 50 };
+    if(n.includes('m16') || n.includes('aug')) return { ammo: '5.56x45mm', damage: 35, fire: 750, magStd: 30, magExt: 60 };
+    if(n.includes('.357')) return { ammo: '.357 Magnum', damage: 45, fire: 300, magStd: 6, magExt: 8 };
+    if(n.includes('glock') || n.includes('beretta') || n.includes('taurus') || n.includes('sig') || n.includes('hk')) return { ammo: '9x19mm', damage: 28, fire: 600, magStd: 15, magExt: 33 };
+    return { ammo: '—', damage: 30, fire: 600, magStd: 20, magExt: 40 };
+  }
+
+  function getStats(name){ return STATS[name] || defaultStats(name); }
+
 
   // Drugs dataset (edit and expand as needed). Each item: [name, rarity, imageKey]
   // Populate with your real list when ready.
@@ -1070,8 +1202,6 @@
   const ATTACHMENTS = [
     // Example placeholders; replace or expand as needed
     ["Flashlight", "uncommon", "attach_LIGHT"],
-    ["Auto Sear", "legendary", "autosear"],
-    ["Switch", "legendary", "switch"],
     ["Extended Magazine", "rare", "gmag_ext"],
     ["Tan Extended Magazine", "rare", "gmag_ext2"],
     ["Kriss Vector Magazine", "epic", "kv_mag_ext"],
@@ -1080,6 +1210,8 @@
     ["Tan Drum Magazine", "epic", "drum_mag_ext2"],
     ["PMAG Extended Magazine", "epic", "pmag_ext"],
     ["PMAG Drum Magazine", "epic", "pmag_ext2"],
+    ["Auto Sear", "legendary", "autosear"],
+    ["Switch", "legendary", "switch"],
   ];
 
   // ------------------------------
@@ -1131,6 +1263,16 @@
   const t2GridStage = document.getElementById('t2GridStage');
   const attachGridStage = document.getElementById('attachGridStage');
   const drugsGridStage = document.getElementById('drugsGridStage');
+  // Stats overlay elements
+  const statsOverlay = document.getElementById('statsOverlay');
+  const closeStats = document.getElementById('closeStats');
+  const statsTitle = document.getElementById('statsTitle');
+  const statsRarity = document.getElementById('statsRarity');
+  const statsImage = document.getElementById('statsImage');
+  const statDamage = document.getElementById('statDamage');
+  const statFire = document.getElementById('statFire');
+  const statAmmo = document.getElementById('statAmmo');
+  const statMag = document.getElementById('statMag');
 
   function slotEl(item){
     const [name, rarity] = item;
@@ -1221,6 +1363,38 @@
     });
   }
 
+  // ------------------------------
+  // Weapon Stats overlay (Tier 1)
+  // ------------------------------
+  function openStats(name, rarity, src){
+    if(!document.getElementById('statsOverlay')) return;
+    const s = getStats(name);
+    document.getElementById('statsTitle').textContent = name;
+    document.getElementById('statsRarity').textContent = (rarity || 'common').toUpperCase();
+    const img = document.getElementById('statsImage');
+    img.src = src || (IMAGES[name] || FALLBACK_IMG);
+    img.alt = name;
+    document.getElementById('statDamage').textContent = s.damage;
+    document.getElementById('statFire').textContent = s.fire + ' RPM';
+    document.getElementById('statAmmo').textContent = s.ammo;
+    document.getElementById('statMag').textContent = `${s.magStd} / ${s.magExt}`;
+    const overlay = document.getElementById('statsOverlay');
+    overlay.classList.add('open');
+    overlay.removeAttribute('aria-hidden');
+  }
+  function closeStatsOverlay(){
+    const overlay = document.getElementById('statsOverlay');
+    if(!overlay) return;
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+  (function setupStatsOverlay(){
+    const overlay = document.getElementById('statsOverlay');
+    const btn = document.getElementById('closeStats');
+    if(btn) btn.addEventListener('click', closeStatsOverlay);
+    if(overlay){ overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeStatsOverlay(); }); }
+  })();
+
   // Build Tier 1 gallery (side tab)
   function buildT1(){
     if(!t1Grid) return;
@@ -1269,9 +1443,15 @@
     const list = ALL_ITEMS.filter(i => i[2] === tier);
     list.forEach(([name, rarity]) => {
       const card = document.createElement('div');
-      card.className = `gallery-card ${rarity}`;
+      card.className = `gallery-card ${rarity}${tier==='t1' ? ' clickable' : ''}`;
       const src = IMAGES[name] || FALLBACK_IMG;
-      card.innerHTML = `<div class=\"name\">${name}</div><img src=\"${src}\" alt=\"${name}\">`;
+      const hint = tier==='t1' ? '<div class="stats-hint">Click for stats</div>' : '';
+      card.innerHTML = `<div class=\"name\">${name}</div><img src=\"${src}\" alt=\"${name}\">${hint}`;
+      if(tier==='t1'){
+        card.setAttribute('tabindex','0');
+        card.addEventListener('click', ()=> openStats(name, rarity, src));
+        card.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); openStats(name, rarity, src); } });
+      }
       targetEl.appendChild(card);
     });
   }
