@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Killadelphia's Contraband System – Demo</title>
+<title>Killadelphia's Contraband System</title>
 <style>
   :root{
     --bg:#0b0b12;
@@ -521,15 +521,24 @@
 /* Server logo in hero (top-right) */
 .hero-logo {
   position: absolute;
-  top: 12px;               /* pin near the top */
-  right: 32px;             /* nudge inward from the right edge */
+  top: 12px;               /* lift logo to the top */
+  right: 36px;             /* nudge left for better balance */
   transform: none;         /* no vertical centering */
-  height: clamp(68px, 12vw, 120px); /* fit better within header */
+  height: clamp(64px, 12vw, 120px); /* slightly smaller for balance */
   width: auto;
   display: block;
   filter: drop-shadow(0 2px 10px rgba(0,0,0,.45));
   opacity: 0.98;
+  pointer-events: none;    /* avoid blocking nearby links */
   z-index: 1;
+}
+
+@media (max-width: 700px) {
+  .hero-logo {
+    top: 10px;
+    right: 12px;
+    height: clamp(56px, 18vw, 88px);
+  }
 }
 
 .hero-accent {
@@ -630,10 +639,11 @@
           <a class="hero-link" id="navT2" href="#"><i class="fa-solid fa-person-military-rifle icon" aria-hidden="true"></i>Tier 2 Weaponry</a>
           <a class="hero-link" id="navAttach" href="#"><i class="fa-solid fa-screwdriver-wrench icon" aria-hidden="true"></i>Attachments</a>
           <a class="hero-link" id="navDrugs" href="#"><i class="fa-solid fa-capsules icon" aria-hidden="true"></i>Drugs</a>
-          <a class="hero-link" id="navTurfMap" href="https://strictlyzel.github.io/Killadelphia-Turf-Map/" target="_blank" rel="noopener">
-            <i class="fa-solid fa-map-location-dot icon" aria-hidden="true"></i>Turf Map
-          <a class="hero-link" id="navDrops" href="#"><i class="fa-solid fa-suitcase icon" aria-hidden="true"></i>Weapon Drops</a>
+          <a class="hero-link" id="navTurf" href="https://strictlyzel.github.io/Killadelphia-Turf-Map/" target="_blank" rel="noopener noreferrer" aria-label="Open Killadelphia Turf Map">
+            <i class="fa-solid fa-map-location-dot icon" aria-hidden="true"></i>
+            Turf Map
           </a>
+          <a class="hero-link" id="navDrops" href="#"><i class="fa-solid fa-box-open icon" aria-hidden="true"></i>Weapon Drops</a>
           <div class="dropdown" id="pricesDropdown">
             <a class="hero-link dropdown-toggle" id="navPrices" href="#"><i class="fa-solid fa-tags icon" aria-hidden="true"></i>Prices <i class="fa-solid fa-angle-down caret" aria-hidden="true"></i></a>
             <div class="dropdown-menu" id="pricesMenu">
@@ -916,7 +926,6 @@
     "Tan Drum Magazine": "images/drum_mag_ext2.png",
     "PMAG Extended Magazine": "images/pmag_ext.png",
     "PMAG Drum Magazine": "images/pmag_ext2.png",
-    "Quagen Pint": "images/quagen_pint.png",    
     "Tris Pint": "images/tris_pint.png",
     "Wockhardt Pint": "images/wockhardt_pint.png",
     "k_56": "images/k_56.png",
